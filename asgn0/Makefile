@@ -1,6 +1,7 @@
 # Makefile for hello.c
--CC = clang
--CFLAGS = -Wall -Wextra -Werror -Wpedantic
+CC = clang
+
+CFLAGS = -Wall -Wextra -Werror -Wpedantic
 
 hello : hello.o
 	clang -std=c17 -Wall -o hello hello.o
