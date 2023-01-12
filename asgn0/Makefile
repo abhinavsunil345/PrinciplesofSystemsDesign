@@ -13,4 +13,4 @@ Hello.o : hello.c
 	clang -std=c17 -Wall -c hello.c
 
 clean :
-	rm -f hello hello.o all
+	rm -f hello hello.o
