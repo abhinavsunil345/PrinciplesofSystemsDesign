@@ -1,7 +1,7 @@
 # Makefile for memory.c
 CC = clang
 
-CFLAGS = -Wall -Wextra -Werror -Wpedantic
+CFLAGS = -Wall -Wextra -Werror -pedantic
 
 memory : memory.o
 	clang -std=c17 -Wall -o memory memory.o
@@ -9,7 +9,7 @@ memory : memory.o
 all : memory.o
 	clang -std=c17 -Wall -o memory memory.o
 
-memory.o : memory.c
+Memory.o : memory.c
 	clang -std=c17 -Wall -c memory.c
 
 clean :
