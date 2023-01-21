@@ -65,7 +65,7 @@ int main() {
             fprintf(stderr, "Invalid Command\n");
             return 1;
         }
-        fd = open(str2, O_RDWR);
+        fd = open(str2, O_RDONLY);
         if (fd == -1) {
             fprintf(stderr, "Invalid Command\n");
             close(fd);
