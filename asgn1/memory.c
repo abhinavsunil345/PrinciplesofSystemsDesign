@@ -22,11 +22,14 @@ int main (){
 		str3[count] = buf1;
 		count++;
 	}
-	scanf("%s", str);
-	// printf("%s\n", str);
-	printf("%s\n", str3);
-	scanf("%s", str2);
-	//printf("%s\n", str2);
+	char *token = strtok(str3, " \t");
+	
+        strcpy(str, token);
+        token = strtok(NULL, " \t");
+        strcpy(str2, token);
+	 printf("%s\n", str);
+	// printf("%s\n", str3);s
+	printf("%s\n", str2);
 	
 	if (strcmp(str, "get") != 0 && strcmp(str, "set") != 0) {
 		fprintf( stderr, "Invalid Command\n");
