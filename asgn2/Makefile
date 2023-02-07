@@ -9,7 +9,7 @@ httpserver : httpserver.o
 all : httpserver.o
 	clang -Wall -o httpserver httpserver.o asgn2_helper_funcs.a
 
-httpserver.o : httpserver.c
+Httpserver.o : httpserver.c
 	clang -Wall -c httpserver.c
 
 clean :
