@@ -26,7 +26,7 @@
 
 
 #define PARSE_REGEX "^([A-zA-Z]*) /([a-zA-Z0-9._]*)\n"
-#define PARSE "^([A-zA-Z]*) /([a-zA-Z0-9._/]*) (HTTP/[1-9].[1-9])\r\n([a-zA-Z0-9.-]*: [a-zA-Z0-9:._/*-~><]*\r\n)*\r\n((.|\n)*)"
+#define PARSE "^([A-zA-Z]*) /([a-zA-Z0-9._/]*) (HTTP/[1-9].[1-9])\r\n([a-zA-Z0-9.-]*: [a-zA-Z0-9:._/*-~><]*\r\n)*\r\n"
 #define GET_REGEX "^([A-zA-Z]*) HTTP/[1-9].[1-9]\r\n(([a-zA-Z0-9._]*) ([a-zA-Z0-9._]*)\r\n)*\r\n"
 
 // #define PARSE_REGEX "^([A-zA-Z]*)"
@@ -39,13 +39,14 @@ typedef struct {
 typedef struct {
 
   // Make an *extra* spot for a null terminator!
-  char  buf[BUFFER_SIZE + 1];
+  char  *buf;
   uint16_t bufsize;
   char *command;
   char *location;
   char* ver;
   char *head;
   char *mes;
+  int msgsize;
   keyval cl;
 } Command;
 
@@ -102,42 +103,43 @@ char* retCode(int code) {
 }
 
 int ret_string(char* ver, char* code, int listened) {
-	int bytes = write(listened, ver, strlen(ver));
+	int bytes = write_all(listened, ver, strlen(ver));
                     if (bytes <= 0) {
-               //         fprintf(stderr, "Invalid Command7\n");
+                        fprintf(stderr, "Invalid Command7\n");
                         return 1;                  
                     }
-        	bytes = write(listened, code, strlen(code));
+        	bytes = write_all(listened, code, strlen(code));
                     if (bytes <= 0) {
-                 //       fprintf(stderr, "Invalid Command8\n"); 
+                        fprintf(stderr, "Invalid Command8\n"); 
                         return 1;         
                     }
-                bytes = write(listened, "\r\nContent-Length: ", strlen("\r\nContent-Length: "));
+                bytes = write_all(listened, "\r\nContent-Length: ", strlen("\r\nContent-Length: "));
                     if (bytes <= 0) {
-                 //       fprintf(stderr, "Invalid Command9\n");
+                        fprintf(stderr, "Invalid Command9\n");
                         return 1;       
                     }
                     return 0;
 }
 
 int get(char* location, int listened, int fd) {
-	char buf[10000];
-	int bytes_read = 0;
+	// char buf[10000];
+	// int bytes_read = 0;
         fd = open(location, O_RDONLY);
-   /*    long bytes = 0;
+       long bytes = 0;
         struct stat file_stats;
         if( stat(location, &file_stats) == 0) {
     		bytes = file_stats.st_size;
     		fprintf(stderr, "\nsize = %ld\n", bytes);
     	}
     	else {
+    		fprintf(stderr, "Invalid Stat Command\n");
     		return -1;
     		}
     	
     	pass_bytes(fd, listened, bytes);
-    	*/
+    	
   
-        if (fd == -1) {
+   /*     if (fd == -1) {
         //    fprintf(stderr, "Invalid Command1\n");
             close(fd);
             return not_found;
@@ -159,14 +161,15 @@ int get(char* location, int listened, int fd) {
                 } while (bytes_written < bytes_read);
             }
         } while (bytes_read > 0);
-        close(fd);
+        */
+       // close(fd);
         
         return 0;
 
 }
 
 int put(Command* c, int listened, char* version) {
-	fprintf(stderr, "here3");
+	fprintf(stderr, "begin put\n");
 	int fd;
 	// int bytes_read = 0;
 	// char buf1;
@@ -174,6 +177,7 @@ int put(Command* c, int listened, char* version) {
 	bool created = false;
 	int x = 0;
 	fd = open(c->location, O_RDWR | O_TRUNC);
+	fprintf(stderr, "opened suc\n");
         //	printf("%d", fd);
     char* haystack = c->head;
     char* needle = "Content-Length: ";
@@ -195,35 +199,30 @@ int put(Command* c, int listened, char* version) {
                     close(fd);
     	return 1;
     }
-   /* int index1 = ret - haystack;
-    int index2 = ret2 - haystack;
-    char sub[100];
-    // int counter = 0;
-    for (int i = 0; i < index2 - index1; i++) {
-        sub[i] = ret[i];
-     //   counter = i;
-    }
-   // counter++;
-   // sub[counter] = '\0';*/
+    struct stat sb;
+			if( stat(c->location, &sb) != -1) 
+			{
+    				if( S_ISREG(sb.st_mode) == 0 )
+    				{
+        			 	fprintf(stderr, "Invalid Command4\n");
+                			ret_string(version, retCode(403), listened);
+                			bytes = write_all(listened, "10\r\n\r\nForbidden\n", strlen("10\r\n\r\nForbidden\n"));
+                    			if (bytes <= 0) {
+                        			fprintf(stderr, "Invalid Command10\n");          
+                    				}
+                    				close(fd);
+                				return 1;
+    						}
+    			}
     x = strtol(ret, NULL, 10);
     
-
-    c->cl.key = "Content-Length";
-    c->cl.value = x;
         if (fd == -1) {
             created = true;
-            close(fd);
+            // close(fd);
             fd = open(c->location, O_RDWR | O_CREAT | O_TRUNC, 0777);
-           /* if (read(fd, &buf1, 1) == -1) {
-                     bytes = write_all(listened, "10\r\n\r\nForbidden\n", strlen("10\r\n\r\nForbidden\n"));
-                    if (bytes <= 0) {
-                        fprintf(stderr, "Invalid Command10\n");          
-                    }
-                    close(fd);
-                    return 1;
-                
-            }*/
+           
             ret_string(version, retCode(201), listened);
+            fprintf(stderr,"\n\nCreated\n\n");
             bytes = write_all(listened, " 8\r\n\r\nCreated\n", strlen(" 8\r\n\r\nCreated\n"));
             if (bytes <= 0) {
                         fprintf(stderr, "Invalid Command10\n");          
@@ -231,7 +230,8 @@ int put(Command* c, int listened, char* version) {
             
         }
         if (created == false) {
-                  ret_string(version, retCode(ok), listened);
+                  ret_string(version, retCode(200), listened);
+                  fprintf(stderr,"\n\nOKOK\n\n");
             bytes = write_all(listened, " 3\r\n\r\nOK\n", strlen(" 3\r\n\r\nOK\n"));
                     if (bytes <= 0) {
                         fprintf(stderr, "Invalid Command10\n");          
@@ -241,44 +241,60 @@ int put(Command* c, int listened, char* version) {
         
        // fprintf(stderr, "\n%s\n", c->mes);   
         fprintf(stderr, "x = %d", x); 
-        uint16_t z = c->bufsize - strlen(c->command) - strlen(c->head) - strlen(c->ver) - strlen(c->location);
+     //   uint16_t z = c->bufsize - strlen(c->command) - strlen(c->head) - strlen(c->ver) - strlen(c->location);
+     	int z = c->msgsize;
+        fprintf(stderr, "z = %d\n", z); 
+        fprintf(stderr, "msg = "); 
+        fprintf(stderr, "%s\n", c->mes); 
         if (z < x) {
-        	fprintf(stderr, "made it here frfr\n"); 
         	int rem = x - z;
+        	fprintf(stderr, "\n\nrem = %d\n\n", rem); 
         	write_all(fd, c->mes,z);
         	// char buffer[rem];
-        	if (z > 3000) {
+        		 fprintf(stderr,"x bigger\n"); 
+        	 fprintf(stderr,"x :%d z: %d", x, z);
         	pass_bytes(listened, fd, rem);
+        	fprintf(stderr,"\n\nPassed Bytes\n\n");
+        	
+        	
         	}
-        	// bytes_read = read(listened, buffer, rem);
-        	// write_all(fd,buffer, bytes_read);
-        	}
-        	else {
-        		write_all(fd, c->mes,x);
+        else {
+        	fprintf(stderr,"\n\nElse\n\n");
+        	write_all(fd, c->mes,x);
         		}
-        
+        	
+        	fprintf(stderr,"after\n"); 
         close(fd);
+        fprintf(stderr,"closed\n");
         return 0;
 
 }
 
 int request(Command *c, int listened){
+	
 	regex_t re;
-  	regmatch_t matches[6];
+  	regmatch_t matches[5];
   	// char buf1;
   	int rc;
 	int bytes_read = 0;
 	// int bytes = 0;
-	bytes_read = read_until(listened, c->buf, 4096,"\r\n\r\n");
+	bytes_read = read_until(listened, c->buf, 1000,"\r\n\r\n");
+	
+	
+	
 	
 	// int checker = 0;
-	// fprintf(stderr, "\n%s\n", c->buf);
+	fprintf(stderr, "\n\nbuff; %s\n\n", c->buf);
+	fprintf(stderr, "\n\n end buff\n\n");
         c->bufsize = bytes_read;
         
    
         
   		    if (c->bufsize > 0) {
+  		    fprintf(stderr, "bytes_read: %d", bytes_read);
+  		    fprintf(stderr, "bufsize: %d", c->bufsize);
     		    c->buf[c->bufsize] = 0;
+    		    // c->bufsize++;
  
     		   // First step -- compile the regex. If this fails, there's
     		   // probably an issue with your PARSE_REGEX string
@@ -287,14 +303,14 @@ int request(Command *c, int listened){
     		   
     		   
     		   
-    		   rc = regexec(&re, (char *)c->buf, 6, matches, 0);
+    		   rc = regexec(&re, (char *)c->buf, 5, matches, 0);
 
     		   if (rc == 0) {
       			  c->command = c->buf;
       			  c->location = c->buf + matches[2].rm_so;
       			  c->ver = c->buf + matches[3].rm_so;
       			  c->head = c->buf + matches[4].rm_so;
-      			  c->mes = c->buf + matches[5].rm_so;
+      			  c->mes = c->buf + matches[4].rm_eo + 2;
 
 
       		// Uncomment me to fixup issues in the above!
@@ -302,12 +318,21 @@ int request(Command *c, int listened){
       		  c->location[matches[2].rm_eo - matches[2].rm_so] = '\0';
       		  c->ver[matches[3].rm_eo - matches[3].rm_so] = '\0';
       		  c->head[matches[4].rm_eo - matches[4].rm_so] = '\0';
-      		  c->mes[matches[5].rm_eo - matches[5].rm_so] = '\0';
-      		  // fprintf(stderr, "\n%s\n", c->mes);
+      		  c->mes[c->bufsize - (matches[4].rm_eo - 3)] = '\0';
+      		  c->msgsize = c->bufsize - (matches[4].rm_eo - 3) - 5;
+      		  // fprintf(stderr, "\nmes = %s\n", c->mes);
+      		  fprintf(stderr, "command: %lu", strlen(c->command));
+      		  fprintf(stderr, "head: %lu", strlen(c->head));
+      		  fprintf(stderr, "ver: %lu", strlen(c->ver));
+      		  fprintf(stderr, "location: %lu", strlen(c->location));
+      		//  fprintf(stderr, "mes: %lu", strlen(c->mes));
+      		
       		  
                   }
                   
                   else {
+                 
+                  regfree(&re);
                  
 		//fprintf(stderr, "%s\n", c->buf + matches[2].rm_so);
 		//fprintf(stderr, "%s\n", c->buf + matches[3].rm_so);
@@ -315,7 +340,10 @@ int request(Command *c, int listened){
                   	
                         return 1;
                    }
-                   }     
+                   
+                   }  
+        //           c->buf = {0};   
+                   regfree(&re);
                     return  0;
 
 
@@ -328,32 +356,11 @@ int response(int regf, Command *c, int listened) {
 	long file_size = 0;
 	struct stat file_stats;
 	 int bytes = 0;
-	 /* bytes = write(listened, c->command, strlen(c->command));
-                    if (bytes <= 0) {
-                        fprintf(stderr, "Invalid Command1\n");
-                        
-                    }
-                    
-        bytes = write(listened, c->location, strlen(c->location));
-                    if (bytes <= 0) {
-                        fprintf(stderr, "Invalid Command2\n");
-                        
-                    }
-        bytes = write(listened, c->ver, strlen(c->ver));
-                    if (bytes <= 0) {
-                        fprintf(stderr, "Invalid Command3\n");
-                        
-                    }
-        bytes = write(listened, c->head, strlen(c->head));
-                    if (bytes < 0) {
-                        fprintf(stderr, "Invalid Command4\n");
-                        
-                    } 
-                    */
+	
                     
 	if (regf == 1) {
 		ret_string(version, retCode(bad_request), listened);
-                bytes = write(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
+                bytes = write_all(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
                     if (bytes <= 0) {
                         fprintf(stderr, "Invalid Command11\n");          
                     }
@@ -362,7 +369,7 @@ int response(int regf, Command *c, int listened) {
          
          if (strcmp(c->ver, "HTTP/1.1") != 0) {
          	ret_string(version, retCode(505), listened);
-                bytes = write(listened, "22\r\n\r\nVersion Not Supported\n", strlen("22\r\n\r\nVersion Not Supported\n"));
+                bytes = write_all(listened, "22\r\n\r\nVersion Not Supported\n", strlen("22\r\n\r\nVersion Not Supported\n"));
                     if (bytes <= 0) {
                         fprintf(stderr, "Invalid Command10\n");          
                     }
@@ -385,7 +392,7 @@ int response(int regf, Command *c, int listened) {
     				{
         			 	fprintf(stderr, "Invalid Command4\n");
                 			ret_string(version, retCode(403), listened);
-                			bytes = write(listened, "10\r\n\r\nForbidden\n", strlen("10\r\n\r\nForbidden\n"));
+                			bytes = write_all(listened, "10\r\n\r\nForbidden\n", strlen("10\r\n\r\nForbidden\n"));
                     			if (bytes <= 0) {
                         			fprintf(stderr, "Invalid Command10\n");          
                     				}
@@ -397,7 +404,7 @@ int response(int regf, Command *c, int listened) {
        			fprintf(stderr, "\n%s\n", c->location);
             		fprintf(stderr, "Invalid Command not found\n");
             		ret_string(version, retCode(not_found), listened);
-       			bytes = write(listened, "10\r\n\r\nNot Found\n", strlen("10\r\n\r\nNot Found\n"));
+       			bytes = write_all(listened, "10\r\n\r\nNot Found\n", strlen("10\r\n\r\nNot Found\n"));
             		close(fd);
             		return 1;
         		}
@@ -409,14 +416,15 @@ int response(int regf, Command *c, int listened) {
           		}
 		// fprintf(stderr, "here6");
     		file_size =  file_stats.st_size;
-    		ret_string(version, retCode(ok), listened);
+    		ret_string(version, retCode(200), listened);
     		// fprintf(stderr, "here7");
     		char fsize[1000];
     		sprintf(fsize, "%ld", file_size);
-    		bytes = write(listened, fsize, strlen(fsize));
+    		bytes = write_all(listened, fsize, strlen(fsize));
     		// fprintf(stderr, "here8");
-    		bytes = write(listened, "\r\n\r\n", strlen("\r\n\r\n"));
+    		bytes = write_all(listened, "\r\n\r\n", strlen("\r\n\r\n"));
     		// fprintf(stderr, "here9");
+    		close(fd);
          	get(c->location, listened, fd);	
          	// fprintf(stderr, "%s", c->command);
          	close(fd);
@@ -425,25 +433,26 @@ int response(int regf, Command *c, int listened) {
          
        if (strcmp(c->command, "PUT") == 0) {
        		put(c, listened, version);
+       		fprintf(stderr,"put returned\n");
        		return 0;
        		}
        		
        		
        	ret_string(version, retCode(501), listened);
-                bytes = write(listened, "16\r\n\r\nNot Implemented\n", strlen("16\r\n\r\nNot Implemented\n"));
+                bytes = write_all(listened, "16\r\n\r\nNot Implemented\n", strlen("16\r\n\r\nNot Implemented\n"));
                     	if (bytes <= 0) {
                         	fprintf(stderr, "Invalid Command10\n");          
                     		}
-       		
+       	fprintf(stderr,"not imp returned\n");
 	return 0;
 }
 
 int main(int argc, char **argv) {
-	// char buf[4097];	
+	
 	char* portc;
 	Command c;
 // fprintf(stderr, "here");
-	
+	char buffer[BUFFER_SIZE + 1000] = {0};
 	
 	if (argc > 2) {
 	printf("Hello");
@@ -466,15 +475,32 @@ int main(int argc, char **argv) {
     //    fprintf(stderr, "here1");
         int listened = 0;
         while(1) {
+        c.buf = buffer;
+        memset(c.buf, 0, BUFFER_SIZE + 1000);	
+        fprintf(stderr,"begin\n"); 
     //    fprintf(stderr, "here1.5");
+    fprintf(stderr,"try to accept\n");
         listened = listener_accept(&sok);
-     //   fprintf(stderr, "here2");
-        int suc = request(&c, listened);
-        // fprintf(stderr, "here3");
-        response(suc, &c, listened);
-        close(listened);
+        if (listened == -1){
+        	fprintf(stderr,"Did not accept\n");
+        		return 1;
         }
-        close(sockfd);
+        fprintf(stderr,"accepted\n");
+     //   fprintf(stderr, "here2");
+     fprintf(stderr,"req start\n");
+        int suc = request(&c, listened);
+        // memset(c.buf, 0, BUFFER_SIZE + 1000);
+        // fprintf(stderr, "here3");
+        fprintf(stderr,"req done\n"); 
+        response(suc, &c, listened);
+        memset(c.buf, 0, BUFFER_SIZE + 1000);
+    fprintf(stderr,"response returned\n");
+        close(listened);
+        fprintf(stderr,"end\n"); 
+        }
+       // close(listened);
+        fprintf(stderr,"fully end\n"); 
+       // close(sockfd);
         
   
   
