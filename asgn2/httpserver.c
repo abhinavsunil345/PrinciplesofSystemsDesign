@@ -25,9 +25,8 @@
  */
 
 #define PARSE_REGEX "^([A-zA-Z]*) /([a-zA-Z0-9._]*)\n"
-#define PARSE                                                                                      \
-    "^([A-zA-Z]*) /([a-zA-Z0-9._/]*) (HTTP/[1-9].[1-9])\r\n([a-zA-Z0-9.-]*: "                      \
-    "[a-zA-Z0-9:._/*-~><]*\r\n)*\r\n"
+// #define NUM "^([0-9]*)$"
+#define PARSE "^([A-zA-Z]*) /([a-zA-Z0-9._]*) (HTTP/[1-9].[1-9])\r\n(([a-zA-Z0-9.-]*: [a-zA-Z0-9:._/*-~><]*\r\n)*)\r\n"
 #define GET_REGEX "^([A-zA-Z]*) HTTP/[1-9].[1-9]\r\n(([a-zA-Z0-9._]*) ([a-zA-Z0-9._]*)\r\n)*\r\n"
 
 // #define PARSE_REGEX "^([A-zA-Z]*)"
@@ -105,8 +104,7 @@ int ret_string(char *ver, char *code, int listened) {
 }
 
 int get(char *location, int listened, int fd) {
-    // char buf[10000];
-    // int bytes_read = 0;
+    
     fd = open(location, O_RDONLY);
     long bytes = 0;
     struct stat file_stats;
@@ -120,39 +118,13 @@ int get(char *location, int listened, int fd) {
 
     pass_bytes(fd, listened, bytes);
 
-    /*     if (fd == -1) {
-        //    fprintf(stderr, "Invalid Command1\n");
-            close(fd);
-            return not_found;
-        }
-        do {
-            bytes_read = read(fd, buf, 10000);
-            // printf("%d", bytes_read);
-            if (bytes_read < 0) {
-          //      fprintf(stderr, "Invalid Command2\n");
-                return 1;
-            } else if (bytes_read > 0) {
-                int bytes_written = 0;
-                do {
-                    int bytes = write(listened, buf + bytes_written, bytes_read - bytes_written);
-                    if (bytes <= 0) {
-                //        fprintf(stderr, "Invalid Command3\n");
-                    }
-                    bytes_written += bytes;
-                } while (bytes_written < bytes_read);
-            }
-        } while (bytes_read > 0);
-        */
-    // close(fd);
-
     return 0;
 }
 
 int put(Command *c, int listened, char *version) {
+     
     fprintf(stderr, "begin put\n");
     int fd;
-    // int bytes_read = 0;
-    // char buf1;
     int bytes;
     bool created = false;
     int x = 0;
@@ -165,17 +137,19 @@ int put(Command *c, int listened, char *version) {
     char *ret;
     //  char* ret2;
     ret = strstr(haystack, needle) + 16;
+    fprintf(stderr, "c->head = %s\n", c->head);
     ret[strlen(ret) - 2] = '\0';
+    fprintf(stderr, "after haystack\n ret = %s", ret);
     // fprintf(stderr, "\nret = l%sl\n", ret);
     if (ret == NULL) {
-        fprintf(stderr, "ret: \n%s", ret);
-        // fprintf(stderr, "\n%s", ret2);
+    //    fprintf(stderr, "ret: \n%s", ret);
         fprintf(stderr, "Invalid Command ret ret\n");
         ret_string(version, retCode(bad_request), listened);
         bytes = write_all(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
         if (bytes <= 0) {
             fprintf(stderr, "Invalid Command10\n");
         }
+        fprintf(stderr, "NULL\n");
         close(fd);
         return 1;
     }
@@ -192,12 +166,44 @@ int put(Command *c, int listened, char *version) {
             return 1;
         }
     }
+    
+    
     x = strtol(ret, NULL, 10);
 
     if (fd == -1) {
         created = true;
+          
         // close(fd);
         fd = open(c->location, O_RDWR | O_CREAT | O_TRUNC, 0777);
+        
+        // fprintf(stderr, "\n%s\n", c->mes);
+    fprintf(stderr, "x = %d", x);
+    //   uint16_t z = c->bufsize - strlen(c->command) - strlen(c->head) - strlen(c->ver) - strlen(c->location);
+    int mes_size = c->msgsize;
+    fprintf(stderr, "mes_size = %d\n", mes_size);
+   // fprintf(stderr, "msg = ");
+   // fprintf(stderr, "%s\n", c->mes);
+    if (mes_size < x) {
+        int rem = x - mes_size;
+        fprintf(stderr, "\n\nrem = %d\n\n", rem);
+        if (mes_size > 0) {
+        write_all(fd, c->mes, mes_size);
+        }
+        // char buffer[rem];
+        fprintf(stderr, "content length bigger than msg size\n");
+        fprintf(stderr, "content length :%d message size: %d\n", x, mes_size);
+     //    char buff[rem];
+    // int bytes_read = read(listened, buff, rem);
+    // write(fd, buff, bytes_read);
+    // char* h = buff;
+    // fprintf(stderr, "\nbuff:%s\n", h);
+        pass_bytes(listened, fd, rem);
+        fprintf(stderr, "\n\nPassed Bytes\n\n");
+
+    } else {
+        fprintf(stderr, "\n\nElse\n\n");
+        write_all(fd, c->mes, x);
+    }
 
         ret_string(version, retCode(201), listened);
         fprintf(stderr, "\n\nCreated\n\n");
@@ -207,6 +213,34 @@ int put(Command *c, int listened, char *version) {
         }
     }
     if (created == false) {
+        // fprintf(stderr, "\n%s\n", c->mes);
+    fprintf(stderr, "x = %d", x);
+    //   uint16_t z = c->bufsize - strlen(c->command) - strlen(c->head) - strlen(c->ver) - strlen(c->location);
+    int mes_size = c->msgsize;
+    fprintf(stderr, "mes_size = %d\n", mes_size);
+   // fprintf(stderr, "msg = ");
+   // fprintf(stderr, "%s\n", c->mes);
+    if (mes_size < x) {
+        int rem = x - mes_size;
+        fprintf(stderr, "\n\nrem = %d\n\n", rem);
+        if (mes_size > 0) {
+        write_all(fd, c->mes, mes_size);
+        }
+        // char buffer[rem];
+        fprintf(stderr, "content length bigger than msg size\n");
+        fprintf(stderr, "content length :%d message size: %d\n", x, mes_size);
+     //    char buff[rem];
+    // int bytes_read = read(listened, buff, rem);
+    // write(fd, buff, bytes_read);
+    // char* h = buff;
+    // fprintf(stderr, "\nbuff:%s\n", h);
+         pass_bytes(listened, fd, rem);
+        fprintf(stderr, "\n\nPassed Bytes\n\n");
+
+    } else {
+        fprintf(stderr, "\n\nElse\n\n");
+        write_all(fd, c->mes, x);
+    }
         ret_string(version, retCode(200), listened);
         fprintf(stderr, "\n\nOKOK\n\n");
         bytes = write_all(listened, " 3\r\n\r\nOK\n", strlen(" 3\r\n\r\nOK\n"));
@@ -214,28 +248,10 @@ int put(Command *c, int listened, char *version) {
             fprintf(stderr, "Invalid Command10\n");
         }
     }
+    
 
-    // fprintf(stderr, "\n%s\n", c->mes);
-    fprintf(stderr, "x = %d", x);
-    //   uint16_t z = c->bufsize - strlen(c->command) - strlen(c->head) - strlen(c->ver) - strlen(c->location);
-    int z = c->msgsize;
-    fprintf(stderr, "z = %d\n", z);
-    fprintf(stderr, "msg = ");
-    fprintf(stderr, "%s\n", c->mes);
-    if (z < x) {
-        int rem = x - z;
-        fprintf(stderr, "\n\nrem = %d\n\n", rem);
-        write_all(fd, c->mes, z);
-        // char buffer[rem];
-        fprintf(stderr, "x bigger\n");
-        fprintf(stderr, "x :%d z: %d", x, z);
-        pass_bytes(listened, fd, rem);
-        fprintf(stderr, "\n\nPassed Bytes\n\n");
 
-    } else {
-        fprintf(stderr, "\n\nElse\n\n");
-        write_all(fd, c->mes, x);
-    }
+    
 
     fprintf(stderr, "after\n");
     close(fd);
@@ -251,7 +267,14 @@ int request(Command *c, int listened) {
     int rc;
     int bytes_read = 0;
     // int bytes = 0;
-    bytes_read = read_until(listened, c->buf, 1000, "\r\n\r\n");
+    bytes_read = read_until(listened, c->buf, 2100, "\r\n\r\n");
+    
+    
+    if (bytes_read == -1) {
+    	fprintf(stderr, "\nbytes read failed\n");
+    	return -1;
+    
+    }
 
     // int checker = 0;
     fprintf(stderr, "\n\nbuff; %s\n\n", c->buf);
@@ -282,13 +305,14 @@ int request(Command *c, int listened) {
             c->location[matches[2].rm_eo - matches[2].rm_so] = '\0';
             c->ver[matches[3].rm_eo - matches[3].rm_so] = '\0';
             c->head[matches[4].rm_eo - matches[4].rm_so] = '\0';
-            c->mes[c->bufsize - (matches[4].rm_eo - 3)] = '\0';
+            c->mes[c->bufsize] = '\0';
             c->msgsize = c->bufsize - (matches[4].rm_eo - 3) - 5;
+       //     fprintf(stderr, "\nmes: %lu", strlen(c->mes));
             // fprintf(stderr, "\nmes = %s\n", c->mes);
-            fprintf(stderr, "command: %lu", strlen(c->command));
-            fprintf(stderr, "head: %lu", strlen(c->head));
-            fprintf(stderr, "ver: %lu", strlen(c->ver));
-            fprintf(stderr, "location: %lu", strlen(c->location));
+            fprintf(stderr, "\ncommand: %s size: %lu\n", c->command, strlen(c->command));
+            fprintf(stderr, "head: %s size:  %lu\n", c->head, strlen(c->head));
+            fprintf(stderr, "ver: %s size:  %lu\n", c->ver, strlen(c->ver));
+            fprintf(stderr, "location: %s size:  %lu\n", c->location, strlen(c->location));
             //  fprintf(stderr, "mes: %lu", strlen(c->mes));
 
         }
@@ -296,6 +320,7 @@ int request(Command *c, int listened) {
         else {
 
             regfree(&re);
+            fprintf(stderr, "failed match\n");
 
             //fprintf(stderr, "%s\n", c->buf + matches[2].rm_so);
             //fprintf(stderr, "%s\n", c->buf + matches[3].rm_so);
@@ -310,11 +335,13 @@ int request(Command *c, int listened) {
 }
 
 int response(int regf, Command *c, int listened) {
+    // int bytes = 0;
     int fd;
     char *version = "HTTP/1.1 ";
     long file_size = 0;
     struct stat file_stats;
     int bytes = 0;
+    
 
     if (regf == 1) {
         ret_string(version, retCode(bad_request), listened);
@@ -323,6 +350,26 @@ int response(int regf, Command *c, int listened) {
             fprintf(stderr, "Invalid Command11\n");
         }
         return 0;
+    }
+    
+     if ((strlen(c->command) + strlen(c->head) + strlen(c->ver) + strlen(c->location)) > 2048) {
+    	 ret_string(version, retCode(bad_request), listened);
+        bytes = write_all(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
+        if (bytes <= 0) {
+            fprintf(stderr, "Characters greater than 2048 in header\n");
+        }
+        return 0;
+    
+    }
+    
+         if (strlen(c->command) > 8) {
+    	 ret_string(version, retCode(bad_request), listened);
+        bytes = write_all(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
+        if (bytes <= 0) {
+            fprintf(stderr, "Characters greater than 2048 in header\n");
+        }
+        return 0;
+    
     }
 
     if (strcmp(c->ver, "HTTP/1.1") != 0) {
@@ -336,7 +383,17 @@ int response(int regf, Command *c, int listened) {
     }
 
     if (strcmp(c->command, "GET") == 0) {
-
+    
+    
+    	if (c->msgsize > 0) {
+    	 ret_string(version, retCode(bad_request), listened);
+        bytes = write_all(listened, "12\r\n\r\nBad Request\n", strlen("12\r\n\r\nBad Request\n"));
+        if (bytes <= 0) {
+            fprintf(stderr, "Characters greater than 2048 in header\n");
+        }
+        return 0;
+    }
+    	
         fd = open(c->location, O_RDWR);
         if (fd == -1) {
             //	fd = open("temp.txt", O_RDONLY);
@@ -353,8 +410,8 @@ int response(int regf, Command *c, int listened) {
                     close(fd);
                     return 1;
                 }
-            }
-
+            }          
+            
             fprintf(stderr, "\n%s\n", c->location);
             fprintf(stderr, "Invalid Command not found\n");
             ret_string(version, retCode(not_found), listened);
@@ -392,8 +449,7 @@ int response(int regf, Command *c, int listened) {
     }
 
     ret_string(version, retCode(501), listened);
-    bytes
-        = write_all(listened, "16\r\n\r\nNot Implemented\n", strlen("16\r\n\r\nNot Implemented\n"));
+    bytes = write_all(listened, "16\r\n\r\nNot Implemented\n", strlen("16\r\n\r\nNot Implemented\n"));
     if (bytes <= 0) {
         fprintf(stderr, "Invalid Command10\n");
     }
@@ -426,13 +482,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Invalid Port\n");
         return 1;
     }
-    //    fprintf(stderr, "here1");
+    
     int listened = 0;
     while (1) {
+    
         c.buf = buffer;
         memset(c.buf, 0, BUFFER_SIZE + 1000);
         fprintf(stderr, "begin\n");
-        //    fprintf(stderr, "here1.5");
+        
         fprintf(stderr, "try to accept\n");
         listened = listener_accept(&sok);
         if (listened == -1) {
@@ -440,17 +497,17 @@ int main(int argc, char **argv) {
             return 1;
         }
         fprintf(stderr, "accepted\n");
-        //   fprintf(stderr, "here2");
+       
         fprintf(stderr, "req start\n");
         int suc = request(&c, listened);
-        // memset(c.buf, 0, BUFFER_SIZE + 1000);
-        // fprintf(stderr, "here3");
-        fprintf(stderr, "req done\n");
+        fprintf(stderr, "\nreq done\n");
+        fprintf(stderr, "response start\n");
         response(suc, &c, listened);
         memset(c.buf, 0, BUFFER_SIZE + 1000);
         fprintf(stderr, "response returned\n");
         close(listened);
         fprintf(stderr, "end\n");
+        
     }
     // close(listened);
     fprintf(stderr, "fully end\n");
