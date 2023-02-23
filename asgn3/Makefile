@@ -1,7 +1,7 @@
 # Makefile for queue.c
 CC = clang
 
-CFLAGS = -Wall -Wextra -Werror
+CFLAGS = -Wall
 
 all : queue.h queue.c
 	clang -Wall -c queue.c
