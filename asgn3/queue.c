@@ -40,6 +40,9 @@ queue_t *queue_new(int size) {
     q->out = 0;
     q->count = 0;
     q->buffer = (void **) malloc(size * sizeof(void *));
+    pthread_mutex_init(&(q->mutex), NULL);
+    pthread_cond_init(&(q->full), NULL);
+    pthread_cond_init(&(q->empty), NULL);
     return q;
 }
 
@@ -52,6 +55,9 @@ queue_t *queue_new(int size) {
  */
 void queue_delete(queue_t **q) {
     free((*q)->buffer);
+    pthread_mutex_destroy(&((*q)->mutex));
+    pthread_cond_destroy(&((*q)->full));
+    pthread_cond_destroy(&((*q)->empty));
     free(*q);
 }
 
