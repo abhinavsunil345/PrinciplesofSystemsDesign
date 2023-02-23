@@ -3,7 +3,10 @@ CC = clang
 
 CFLAGS=-Wall -Wextra -Werror -pedantic
 
-Queue.o : queue.h queue.c
+all : queue.h queue.c
+	clang -Wall -c queue.c
+
+queue.o : queue.h queue.c
 	clang -Wall -c queue.c
 
 clean :
