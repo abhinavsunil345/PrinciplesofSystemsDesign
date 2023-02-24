@@ -111,4 +111,3 @@ bool queue_pop(queue_t *q, void **elem) {
     pthread_cond_signal(&(q->full));
     return true;
 }
-
