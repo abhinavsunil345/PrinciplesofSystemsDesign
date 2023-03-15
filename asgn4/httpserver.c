@@ -25,7 +25,7 @@
 #include <pthread.h>
 
 pthread_mutex_t mutex;
-pthread_mutex_t auditex;
+// pthread_mutex_t auditex;
 void handle_connection(uintptr_t r);
 
 void handle_get(conn_t *);
@@ -33,7 +33,6 @@ void handle_put(conn_t *);
 void handle_unsupported(conn_t *);
 
 queue_t *q;
-queue_t *put_q;
 
 void *queue_worker() {
 
@@ -90,8 +89,7 @@ int main(int argc, char **argv) {
     // fprintf(stderr, "Hello2\n");
 
     // fprintf(stderr, "Hello1\n");
-    q = queue_new(10);
-    put_q = queue_new(5);
+    q = queue_new(threadcount);
 
     signal(SIGPIPE, SIG_IGN);
     Listener_Socket sock;
@@ -109,7 +107,7 @@ int main(int argc, char **argv) {
     }
 
     while (1) {
-        uintptr_t connfd = listener_accept(&sock);
+        intptr_t connfd = listener_accept(&sock);
         queue_push(q, (void *) connfd);
     }
     return EXIT_SUCCESS;
@@ -181,14 +179,17 @@ void handle_get(conn_t *conn) {
         // debug("%s: %d", uri, errno);
         if (errno == EACCES) {
             res = &RESPONSE_FORBIDDEN;
+            flock(fd, LOCK_SH);
             pthread_mutex_unlock(&mutex);
             goto out;
         } else if (errno == ENOENT) {
             res = &RESPONSE_NOT_FOUND;
+            flock(fd, LOCK_SH);
             pthread_mutex_unlock(&mutex);
             goto out;
         } else {
             res = &RESPONSE_INTERNAL_SERVER_ERROR;
+            flock(fd, LOCK_SH);
             pthread_mutex_unlock(&mutex);
             goto out;
         }
@@ -197,6 +198,7 @@ void handle_get(conn_t *conn) {
 
     flock(fd, LOCK_SH);
     pthread_mutex_unlock(&mutex);
+
     long bytes = 0;
     struct stat file_stats;
     if (stat(uri, &file_stats) == 0) {
@@ -260,10 +262,12 @@ void handle_put(conn_t *conn) {
         // debug("%s: %d", uri, errno);
         if (errno == EACCES || errno == EISDIR || errno == ENOENT) {
             res = &RESPONSE_FORBIDDEN;
+            flock(fd, LOCK_EX);
             pthread_mutex_unlock(&mutex);
             goto out;
         } else {
             res = &RESPONSE_INTERNAL_SERVER_ERROR;
+            flock(fd, LOCK_EX);
             pthread_mutex_unlock(&mutex);
             goto out;
         }
