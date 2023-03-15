@@ -92,9 +92,6 @@ int main(int argc, char **argv) {
     // fprintf(stderr, "Hello1\n");
     q = queue_new(10);
     put_q = queue_new(5);
-    int rc = 0;
-    rc = pthread_mutex_init(&mutex, NULL);
-    assert(!rc);
 
     signal(SIGPIPE, SIG_IGN);
     Listener_Socket sock;
@@ -115,8 +112,6 @@ int main(int argc, char **argv) {
         uintptr_t connfd = listener_accept(&sock);
         queue_push(q, (void *) connfd);
     }
-    assert(!rc);
-    rc = pthread_mutex_destroy(&mutex);
     return EXIT_SUCCESS;
 }
 
@@ -210,6 +205,7 @@ void handle_get(conn_t *conn) {
     } else {
         fprintf(stderr, "Invalid Stat Command\n");
         res = &RESPONSE_INTERNAL_SERVER_ERROR;
+        pthread_mutex_unlock(&mutex);
         goto out;
     }
 
@@ -217,6 +213,7 @@ void handle_get(conn_t *conn) {
 
     if (S_ISREG(file_stats.st_mode) == 0) {
         res = &RESPONSE_FORBIDDEN;
+        pthread_mutex_unlock(&mutex);
         goto out;
     }
 
