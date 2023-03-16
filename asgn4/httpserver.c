@@ -47,13 +47,43 @@ void *queue_worker() {
 
 int main(int argc, char **argv) {
     // fprintf(stderr, "Hello1\n");
-
-    if (argc < 2) {
+    
+     if (argc < 2) {
         warnx("wrong arguments: %s port_num", argv[0]);
         //  fprintf(stderr, "usage: %s <port>\n", argv[0]);
         return EXIT_FAILURE;
     }
+    
+    
+    int c = 0;
     int threadcount = 0;
+    int tflag = 0;
+    size_t port = 0;
+    
+    while ((c = getopt (argc, argv, "t:")) != -1) {
+    switch (c)
+      {
+      case 't':
+        tflag = 1;
+        threadcount = atoi(optarg);
+        break;
+      default: /* '?' */
+        exit(EXIT_FAILURE);
+      }
+     }
+     
+      if (optind >= argc) {
+               fprintf(stderr, "No Port \n");
+               exit(EXIT_FAILURE);
+           }
+     if (tflag == 0) {
+     	threadcount = 4;
+     	}
+     port = atoi(argv[optind]);
+     
+     // fprintf(stderr, " Thread Count: %d Port # %zu\n", threadcount , port);
+
+   /* int threadcount = 0;
     size_t port;
     char *endptr;
 
@@ -84,7 +114,7 @@ int main(int argc, char **argv) {
         // strncpy(tc,t+2,strlen(t) - 2);
         // fprintf(stderr, "t: %s\n", tc);
         threadcount = atoi(t);
-    }
+    } */
 
     // fprintf(stderr, "Hello2\n");
 
@@ -149,28 +179,7 @@ void handle_get(conn_t *conn) {
     char *header = conn_get_header(conn, "Request-Id");
     // fprintf(stdout, "%s\n", header);
     const Response_t *res = NULL;
-    // debug("GET request not implemented. But, we want to get %s", uri);
-
-    // What are the steps in here?
-
-    // 1. Open the file.
-    // If  open it returns < 0, then use the result appropriately
-    //   a. Cannot access -- use RESPONSE_FORBIDDEN
-    //   b. Cannot find the file -- use RESPONSE_NOT_FOUND
-    //   c. other error? -- use RESPONSE_INTERNAL_SERVER_ERROR
-    // (hint: check errno for these cases)!
-
-    // 2. Get the size of the file.
-    // (hint: checkout the function fstat)!
-
-    // Get the size of the file.
-
-    // 3. Check if the file is a directory, because directories *will*
-    // open, but are not valid.
-    // (hint: checkout the macro "S_IFDIR", which you can use after you call fstat!)
-
-    // 4. Send the file
-    // (hint: checkout the conn_send_file function!)
+   
     pthread_mutex_lock(&mutex);
     int fd = open(uri, O_RDONLY);
     // CHECKING IF FILE EXISTS AND CAN BE ACCESED
@@ -179,18 +188,16 @@ void handle_get(conn_t *conn) {
         // debug("%s: %d", uri, errno);
         if (errno == EACCES) {
             res = &RESPONSE_FORBIDDEN;
-            flock(fd, LOCK_SH);
-            pthread_mutex_unlock(&mutex);
+           
             goto out;
         } else if (errno == ENOENT) {
             res = &RESPONSE_NOT_FOUND;
-            flock(fd, LOCK_SH);
-            pthread_mutex_unlock(&mutex);
+            
+            
             goto out;
         } else {
             res = &RESPONSE_INTERNAL_SERVER_ERROR;
-            flock(fd, LOCK_SH);
-            pthread_mutex_unlock(&mutex);
+          
             goto out;
         }
     }
@@ -207,7 +214,6 @@ void handle_get(conn_t *conn) {
     } else {
         fprintf(stderr, "Invalid Stat Command\n");
         res = &RESPONSE_INTERNAL_SERVER_ERROR;
-        pthread_mutex_unlock(&mutex);
         goto out;
     }
 
@@ -215,7 +221,6 @@ void handle_get(conn_t *conn) {
 
     if (S_ISREG(file_stats.st_mode) == 0) {
         res = &RESPONSE_FORBIDDEN;
-        pthread_mutex_unlock(&mutex);
         goto out;
     }
 
@@ -232,6 +237,10 @@ out:
     //pthread_mutex_lock(&auditex);
     conn_send_response(conn, res);
     fprintf(stderr, "GET,/%s,%hu,%s\n", uri, response_get_code(res), header);
+    if (fd < 0) {
+    pthread_mutex_unlock(&mutex);
+    return;
+    }
     // pthread_mutex_unlock(&auditex);
     close(fd);
 }
@@ -262,13 +271,9 @@ void handle_put(conn_t *conn) {
         // debug("%s: %d", uri, errno);
         if (errno == EACCES || errno == EISDIR || errno == ENOENT) {
             res = &RESPONSE_FORBIDDEN;
-            flock(fd, LOCK_EX);
-            pthread_mutex_unlock(&mutex);
             goto out;
         } else {
             res = &RESPONSE_INTERNAL_SERVER_ERROR;
-            flock(fd, LOCK_EX);
-            pthread_mutex_unlock(&mutex);
             goto out;
         }
     }
@@ -276,6 +281,7 @@ void handle_put(conn_t *conn) {
     ftruncate(fd, 0);
     pthread_mutex_unlock(&mutex);
     res = conn_recv_file(conn, fd);
+    
 
     if (res == NULL && existed) {
         res = &RESPONSE_OK;
@@ -287,6 +293,10 @@ out:
     // pthread_mutex_lock(&auditex);
     conn_send_response(conn, res);
     fprintf(stderr, "PUT,/%s,%hu,%s\n", uri, response_get_code(res), header);
+    if (fd < 0) {
+    pthread_mutex_unlock(&mutex);
+    return;
+    }
     // pthread_mutex_unlock(&auditex);
     close(fd);
 }
