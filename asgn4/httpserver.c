@@ -47,43 +47,40 @@ void *queue_worker() {
 
 int main(int argc, char **argv) {
     // fprintf(stderr, "Hello1\n");
-    
-     if (argc < 2) {
+
+    if (argc < 2) {
         warnx("wrong arguments: %s port_num", argv[0]);
         //  fprintf(stderr, "usage: %s <port>\n", argv[0]);
         return EXIT_FAILURE;
     }
-    
-    
+
     int c = 0;
     int threadcount = 0;
     int tflag = 0;
     size_t port = 0;
-    
-    while ((c = getopt (argc, argv, "t:")) != -1) {
-    switch (c)
-      {
-      case 't':
-        tflag = 1;
-        threadcount = atoi(optarg);
-        break;
-      default: /* '?' */
-        exit(EXIT_FAILURE);
-      }
-     }
-     
-      if (optind >= argc) {
-               fprintf(stderr, "No Port \n");
-               exit(EXIT_FAILURE);
-           }
-     if (tflag == 0) {
-     	threadcount = 4;
-     	}
-     port = atoi(argv[optind]);
-     
-     // fprintf(stderr, " Thread Count: %d Port # %zu\n", threadcount , port);
 
-   /* int threadcount = 0;
+    while ((c = getopt(argc, argv, "t:")) != -1) {
+        switch (c) {
+        case 't':
+            tflag = 1;
+            threadcount = atoi(optarg);
+            break;
+        default: /* '?' */ exit(EXIT_FAILURE);
+        }
+    }
+
+    if (optind >= argc) {
+        fprintf(stderr, "No Port \n");
+        exit(EXIT_FAILURE);
+    }
+    if (tflag == 0) {
+        threadcount = 4;
+    }
+    port = atoi(argv[optind]);
+
+    // fprintf(stderr, " Thread Count: %d Port # %zu\n", threadcount , port);
+
+    /* int threadcount = 0;
     size_t port;
     char *endptr;
 
@@ -179,7 +176,7 @@ void handle_get(conn_t *conn) {
     char *header = conn_get_header(conn, "Request-Id");
     // fprintf(stdout, "%s\n", header);
     const Response_t *res = NULL;
-   
+
     pthread_mutex_lock(&mutex);
     int fd = open(uri, O_RDONLY);
     // CHECKING IF FILE EXISTS AND CAN BE ACCESED
@@ -188,16 +185,15 @@ void handle_get(conn_t *conn) {
         // debug("%s: %d", uri, errno);
         if (errno == EACCES) {
             res = &RESPONSE_FORBIDDEN;
-           
+
             goto out;
         } else if (errno == ENOENT) {
             res = &RESPONSE_NOT_FOUND;
-            
-            
+
             goto out;
         } else {
             res = &RESPONSE_INTERNAL_SERVER_ERROR;
-          
+
             goto out;
         }
     }
@@ -238,8 +234,8 @@ out:
     conn_send_response(conn, res);
     fprintf(stderr, "GET,/%s,%hu,%s\n", uri, response_get_code(res), header);
     if (fd < 0) {
-    pthread_mutex_unlock(&mutex);
-    return;
+        pthread_mutex_unlock(&mutex);
+        return;
     }
     // pthread_mutex_unlock(&auditex);
     close(fd);
@@ -281,7 +277,6 @@ void handle_put(conn_t *conn) {
     ftruncate(fd, 0);
     pthread_mutex_unlock(&mutex);
     res = conn_recv_file(conn, fd);
-    
 
     if (res == NULL && existed) {
         res = &RESPONSE_OK;
@@ -294,8 +289,8 @@ out:
     conn_send_response(conn, res);
     fprintf(stderr, "PUT,/%s,%hu,%s\n", uri, response_get_code(res), header);
     if (fd < 0) {
-    pthread_mutex_unlock(&mutex);
-    return;
+        pthread_mutex_unlock(&mutex);
+        return;
     }
     // pthread_mutex_unlock(&auditex);
     close(fd);
