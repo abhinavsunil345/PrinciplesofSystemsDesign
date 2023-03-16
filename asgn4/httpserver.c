@@ -274,8 +274,8 @@ void handle_put(conn_t *conn) {
         }
     }
     flock(fd, LOCK_EX);
-    ftruncate(fd, 0);
     pthread_mutex_unlock(&mutex);
+    ftruncate(fd, 0);
     res = conn_recv_file(conn, fd);
 
     if (res == NULL && existed) {
