@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
     int LRU = 0;
     int clock = 0;
     int c = 0;
+    int evicflag = 0;
 
     while ((c = getopt(argc, argv, "FLCN:")) != -1) {
         switch (c) {
@@ -45,19 +46,22 @@ int main(int argc, char **argv) {
 
     char **cache = malloc(size * sizeof(char *));
     for (int i = 0; i < size; i++) {
-        cache[i] = malloc(1024 * sizeof(char));
+        cache[i] = malloc(2096 * sizeof(char *));
     }
-    char buf[1024];
+    char buf[2096];
     int count = 0;
     int head = 0;
     int matchfl = 0;
-    char evicted[1000][1024];
+    char **evicted = malloc(1000 * sizeof(char *));
+    for (int i = 0; i < 1000; i++) {
+        evicted[i] = malloc(2096 * sizeof(char *));
+    }
     int evictedcount = 0;
     int misses = 0;
     int comp = 0;
     int cap = 0;
     if (filo == 1) {
-        while (fgets(buf, 1024, stdin) != NULL) {
+        while (fgets(buf, 2096, stdin) != NULL) {
             //read(0, buf, 1024);
             //fgets(buf, 1024, stdin);
             buf[strcspn(buf, "\n")] = 0;
@@ -82,6 +86,7 @@ int main(int argc, char **argv) {
                 printf("MISS\n");
                 for (int i = 0; i < evictedcount; i++) {
                     if (strcmp(evicted[i], buf) == 0) {
+                        evicflag = 1;
                         cap++;
                         break;
                     }
@@ -91,8 +96,11 @@ int main(int argc, char **argv) {
                 // if cache is full lifo pop and push using circular array
 
                 if (count == size) {
-                    strcpy(evicted[evictedcount], cache[head]);
-                    evictedcount++;
+                    if (evicflag == 0) {
+                        strcpy(evicted[evictedcount], cache[head]);
+                        evictedcount++;
+                    }
+                    evicflag = 0;
                     strcpy(cache[head], buf);
                     head++;
                     if (head == size) {
@@ -129,7 +137,7 @@ int main(int argc, char **argv) {
 
     if (clock == 1) {
         int check[size];
-        while (fgets(buf, 1024, stdin) != NULL) {
+        while (fgets(buf, 2096, stdin) != NULL) {
             //read(0, buf, 1024);
             //fgets(buf, 1024, stdin);
             buf[strcspn(buf, "\n")] = 0;
@@ -155,6 +163,7 @@ int main(int argc, char **argv) {
                 printf("MISS\n");
                 for (int i = 0; i < evictedcount; i++) {
                     if (strcmp(evicted[i], buf) == 0) {
+                        evicflag = 1;
                         cap++;
                         break;
                     }
@@ -173,8 +182,11 @@ int main(int argc, char **argv) {
                                 head = 0;
                             }
                         } else {
-                            strcpy(evicted[evictedcount], cache[head]);
-                            evictedcount++;
+                            if (evicflag == 0) {
+                                strcpy(evicted[evictedcount], cache[head]);
+                                evictedcount++;
+                            }
+                            evicflag = 0;
                             strcpy(cache[head], buf);
                             check[head] = 0;
                             head++;
@@ -215,13 +227,12 @@ int main(int argc, char **argv) {
     ///
 
     if (LRU == 1) {
-        char holder[1024];
-        char hholder[1024];
-        while (fgets(buf, 1024, stdin) != NULL) {
+        char holder[2096];
+        char hholder[2096];
+        while (fgets(buf, 2096, stdin) != NULL) {
             //read(0, buf, 1024);
             //  fgets(buf, 1024, stdin);
             buf[strcspn(buf, "\n")] = 0;
-
             for (int j = 0; j < count; j++) {
 
                 if (strcmp(buf, cache[j]) == 0) {
@@ -252,15 +263,20 @@ int main(int argc, char **argv) {
                 printf("MISS\n");
                 for (int i = 0; i < evictedcount; i++) {
                     if (strcmp(evicted[i], buf) == 0) {
+                        evicflag = 1;
                         cap++;
                         break;
                     }
                 }
                 misses++;
+                if (evicflag == 0) {
+                    strcpy(evicted[evictedcount], cache[0]);
+                    evictedcount++;
+                }
+                evicflag = 0;
 
-                strcpy(evicted[evictedcount], cache[0]);
-                evictedcount++;
                 if (count == size && size > 1) {
+                    // fprintf(stderr, "Evict\n");
                     strcpy(holder, cache[count - 2]);
                     strcpy(cache[count - 2], cache[count - 1]);
                     for (int i = count - 1; i > 0; i--) {
@@ -272,8 +288,13 @@ int main(int argc, char **argv) {
                 }
 
                 else {
-                    strcpy(cache[count], buf);
-                    count++;
+                    if (size == 1) {
+                        strcpy(cache[0], buf);
+                        count = 1;
+                    } else {
+                        strcpy(cache[count], buf);
+                        count++;
+                    }
                 }
 
                 //fgets(buf, 1024, stdin);
@@ -293,6 +314,18 @@ int main(int argc, char **argv) {
 
     //
     //
+
+    for (int i = 0; i < size; i++) {
+        free(cache[i]);
+    }
+
+    free(cache);
+
+    for (int i = 0; i < 1000; i++) {
+        free(evicted[i]);
+    }
+
+    free(evicted);
 
     return 0;
 }
