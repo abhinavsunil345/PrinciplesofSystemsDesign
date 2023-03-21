@@ -42,6 +42,11 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
+    if (size <= 0) {
+        fprintf(stderr, "Invalid size Entered \n");
+        exit(EXIT_FAILURE);
+    }
+
     // fprintf(stderr, "size: %d filo: %d LRU: %d Clock: %d\n", size, filo, LRU, clock);
 
     char **cache = malloc(size * sizeof(char *));
